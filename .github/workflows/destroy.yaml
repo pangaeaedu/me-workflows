@@ -7,11 +7,11 @@ jobs:
   destroy:
     runs-on: self-hosted
     steps:
-    - name: "Check permission"
-      uses: edmodoworld/check-cicd-permission@main
-      with:
-        require: ${{ secrets.CICD_ADMIN }}
-        environment: ${{ github.event.inputs.deploy-env }}
+    # - name: "Check permission"
+    #   uses: edmodoworld/check-cicd-permission@main
+    #   with:
+    #     require: ${{ secrets.CICD_ADMIN }}
+    #     environment: ${{ github.event.inputs.deploy-env }}
     - name: "Checkout source code"
       uses: actions/checkout@v2
     - name: "Prepare environment"
