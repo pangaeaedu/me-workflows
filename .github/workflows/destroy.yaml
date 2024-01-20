@@ -1,0 +1,54 @@
+name: destroy
+
+on:
+  workflow_call:
+
+jobs:
+  destroy:
+    runs-on: self-hosted
+    steps:
+    - name: "Check permission"
+      uses: edmodoworld/check-cicd-permission@main
+      with:
+        require: ${{ secrets.CICD_ADMIN }}
+        environment: ${{ github.event.inputs.deploy-env }}
+    - name: "Checkout source code"
+      uses: actions/checkout@v2
+    - name: "Prepare environment"
+      id: prep
+      run: |
+        source .github/global.env
+        cat .github/global.env >> ${GITHUB_ENV}
+        DESTROY_ENV=${{ github.event.inputs.deploy-env }}
+        source .github/${DESTROY_ENV}.env
+        cat .github/${DESTROY_ENV}.env >> ${GITHUB_ENV}
+        echo "::set-output name=kubernetes-namespace::${KUBERNETES_NAMESPACE}"
+    - name: AWS assume cicd role
+      uses: aws-actions/configure-aws-credentials@v1
+      env:
+        AWS_SDK_LOAD_CONFIG: false
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ env.GLOBAL_AWS_ROLE_ARN }}
+        role-duration-seconds: 1200
+        role-session-name: GitHubAction
+    - name: AWS assume helm role
+      uses: aws-actions/configure-aws-credentials@v1
+      env:
+        AWS_SDK_LOAD_CONFIG: false
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ env.HELM_AWS_ROLE_ARN }}
+        role-duration-seconds: 1200
+        role-session-name: GitHubAction
+    - name: Destroy
+      uses: docker://590183924964.dkr.ecr.ap-southeast-1.amazonaws.com/infrastructure:latest
+      env:
+        RELEASE_NAME: ${{ env.APP_NAME }}
+        IMAGE_NAME: ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}
+        AWS_REGION: ${{ env.AWS_REGION }}
+        ENVIRONMENT: ${{ env.ENVIRONMENT }}
+        KUBERNETES_NAMESPACE: ${{ steps.prep.outputs.kubernetes-namespace }}
+        STAGE: ${{ env.STAGE }}
+      with:
+        entrypoint: ./deploy/destroy

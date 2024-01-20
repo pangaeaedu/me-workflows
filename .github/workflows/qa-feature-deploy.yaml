@@ -1,0 +1,73 @@
+name: qa-feature-deploy
+
+on:
+  workflow_call:
+
+jobs:
+  build-deploy:
+    runs-on: self-hosted
+    steps:
+    - name: "Checkout source code"
+      uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.GH_BOT_PAT }}
+        submodules: recursive
+    - name: "Prepare environment"
+      id: prep
+      run: |
+        # Source our global environment variables & add them to GITHUB_ENV for subsequent steps
+        source .github/global.env
+        cat .github/global.env >> ${GITHUB_ENV}
+
+        SHORT_SHA=`git rev-parse --short ${{ github.sha }}`
+        echo "REVISION=${{ github.ref_name }}/${SHORT_SHA}" >> ${GITHUB_ENV}
+        echo  "RELEASE_DATE=$((`date "+%Y%m%d%H%M%S"`))" >> ${GITHUB_ENV}
+        
+        DEPLOY_ENV=${{ github.event.inputs.deploy-env }}
+        source .github/${DEPLOY_ENV}.env
+        cat .github/${DEPLOY_ENV}.env >> ${GITHUB_ENV}
+
+        echo "::set-output name=tag::pr-${{ github.sha }}"
+        echo "::set-output name=kubernetes-namespace::${KUBERNETES_NAMESPACE}"
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        IMAGE_TAG: ${{ steps.prep.outputs.tag }}
+        GITHUB_TOKEN: ${{ secrets.GH_BOT_PAT }}
+      run: |
+        # This is needed because the Github Action environment variables have issues if the value contains spaces (e.g. 'EXTRA_DOCKER_ARGS')
+        source .github/global.env
+
+        # Build and push the image using the SHA tag
+        docker build -f ${{ env.DOCKERFILE }} -t ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:${IMAGE_TAG} ${EXTRA_DOCKER_ARGS} .
+        docker push ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:${IMAGE_TAG}
+    - name: AWS assume cicd role
+      uses: aws-actions/configure-aws-credentials@v1
+      env:
+        AWS_SDK_LOAD_CONFIG: false
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ env.GLOBAL_AWS_ROLE_ARN }}
+        role-duration-seconds: 1200
+        role-session-name: GitHubAction
+    - name: AWS assume helm role
+      uses: aws-actions/configure-aws-credentials@v1
+      env:
+        AWS_SDK_LOAD_CONFIG: false
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ env.HELM_AWS_ROLE_ARN }}
+        role-duration-seconds: 1200
+        role-session-name: GitHubAction
+    - name: Deploy
+      id: deploy
+      uses: docker://590183924964.dkr.ecr.ap-southeast-1.amazonaws.com/infrastructure:latest
+      env:
+        RELEASE_NAME: ${{ env.APP_NAME }}
+        IMAGE_NAME: ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}
+        IMAGE_TAG: ${{ steps.prep.outputs.tag }}
+        AWS_REGION: ${{ env.AWS_REGION }}
+        ENVIRONMENT: ${{ env.ENVIRONMENT }}
+        KUBERNETES_NAMESPACE: ${{ steps.prep.outputs.kubernetes-namespace }}
+        STAGE: ${{ env.STAGE }}
+      with:
+        entrypoint: ./deploy/deploy

@@ -1,0 +1,89 @@
+name: release
+
+on:
+  workflow_call:
+
+jobs:
+  release:
+    runs-on: self-hosted
+    steps:
+    # - name: "Check permission"
+    #   uses: edmodoworld/check-cicd-permission@main
+    #   with:
+    #     require: ${{ secrets.CICD_ADMIN }}
+    #     environment: ${{ github.event.deployment.environment }}
+    - name: "Checkout source code"
+      uses: actions/checkout@v2   
+    - name: "Prepare environment"
+      id: prep
+      run: |
+        source .github/global.env
+        echo 'Release for ${{ github.event.deployment.environment }} from branch ${{ github.event.deployment.payload.step }}'
+
+        if [[ '${{ github.event.deployment.payload.step }}' == ${RELEASE_BRANCH} ]]; then
+          if [[ '${{ github.event.deployment.environment }}' == *"staging" || '${{ github.event.deployment.environment }}' == *"prod" ]]; then
+            STG=${{ github.event.deployment.environment }}
+          else
+            echo "This isn't either the deployment on staging or prod from release. Exiting..."
+            exit 1
+          fi
+        elif [[ '${{ github.event.deployment.payload.step }}' == ${MAIN_BRANCH} ]]; then
+          if [[ '${{ github.event.deployment.environment }}' == qa ]]; then
+            STG=${{ github.event.deployment.environment }}
+          else
+            echo "This isn't the deployment on qa from main. Exiting..."
+            exit 1
+          fi
+        else
+          echo "This isn't either release staging or qa or prod. Exiting..."
+          exit 1
+        fi
+        source .github/global.env
+        cat .github/global.env >> ${GITHUB_ENV}
+        source .github/${STG}.env
+        cat .github/${STG}.env >> ${GITHUB_ENV}
+        echo "::set-output name=tag::${{ github.event.deployment.payload.step }}-${{ github.event.deployment.sha }}"
+        echo "::set-output name=kubernetes-namespace::${KUBERNETES_NAMESPACE}"
+    - name: AWS assume cicd role
+      uses: aws-actions/configure-aws-credentials@v1
+      env:
+        AWS_SDK_LOAD_CONFIG: false
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ env.GLOBAL_AWS_ROLE_ARN }}
+        role-duration-seconds: 1200
+        role-session-name: GitHubAction
+    - name: AWS assume helm role
+      uses: aws-actions/configure-aws-credentials@v1
+      env:
+        AWS_SDK_LOAD_CONFIG: false
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ env.HELM_AWS_ROLE_ARN }}
+        role-duration-seconds: 1200
+        role-session-name: GitHubAction
+    - name: Deploy
+      id: deploy
+      uses: docker://590183924964.dkr.ecr.ap-southeast-1.amazonaws.com/infrastructure:latest
+      env:
+        RELEASE_NAME: ${{ env.APP_NAME }}
+        IMAGE_NAME: ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}
+        IMAGE_TAG: ${{ steps.prep.outputs.tag }}
+        AWS_REGION: ${{ env.AWS_REGION }}
+        ENVIRONMENT: ${{ env.ENVIRONMENT }}
+        KUBERNETES_NAMESPACE: ${{ steps.prep.outputs.kubernetes-namespace }}
+        STAGE: ${{ env.STAGE }}
+      with:
+        entrypoint: ./deploy/deploy
+    - name: 'Deployment Success'
+      uses: 'deliverybot/deployment-status@master'
+      if: success()
+      with:
+        state: 'success'
+        token: '${{ github.token }}'
+    - name: 'Deployment Failure'
+      uses: 'deliverybot/deployment-status@master'
+      if: failure()
+      with:
+        state: 'failure'
+        token: '${{ github.token }}'

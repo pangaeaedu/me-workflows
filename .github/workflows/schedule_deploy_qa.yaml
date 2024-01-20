@@ -1,0 +1,53 @@
+name: Schedule deploy qa
+
+on:
+  workflow_call:
+
+jobs:
+  deploy_qa:
+    runs-on: self-hosted
+    steps:
+    - name: "Checkout source code"
+      uses: actions/checkout@v2
+    - name: "Prepare environment"
+      id: prep
+      run: |
+        source .github/global.env
+        STAGE=qa
+        cat .github/global.env >> ${GITHUB_ENV}
+        source .github/${STAGE}.env
+        cat .github/${STAGE}.env >> ${GITHUB_ENV}
+        echo  "RELEASE_DATE=$((`date "+%Y%m%d%H%M%S"`))" >> ${GITHUB_ENV}
+        echo "::set-output name=tag::latest-main"
+        echo "::set-output name=kubernetes-namespace::${KUBERNETES_NAMESPACE}"
+    - name: AWS assume cicd role
+      uses: aws-actions/configure-aws-credentials@v1
+      env:
+        AWS_SDK_LOAD_CONFIG: false
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ env.GLOBAL_AWS_ROLE_ARN }}
+        role-duration-seconds: 1200
+        role-session-name: GitHubAction
+    - name: AWS assume helm role
+      uses: aws-actions/configure-aws-credentials@v1
+      env:
+        AWS_SDK_LOAD_CONFIG: false
+      with:
+        aws-region: ${{ env.AWS_REGION }}
+        role-to-assume: ${{ env.HELM_AWS_ROLE_ARN }}
+        role-duration-seconds: 1200
+        role-session-name: GitHubAction
+    - name: Deploy to ${{ env.STAGE }}
+      id: deploy
+      uses: docker://590183924964.dkr.ecr.ap-southeast-1.amazonaws.com/infrastructure:latest
+      env:
+        RELEASE_NAME: ${{ env.APP_NAME }}
+        IMAGE_NAME: ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}
+        IMAGE_TAG: ${{ steps.prep.outputs.tag }}
+        AWS_REGION: ${{ env.AWS_REGION }}
+        ENVIRONMENT: ${{ env.ENVIRONMENT }}
+        KUBERNETES_NAMESPACE: ${{ steps.prep.outputs.kubernetes-namespace }}
+        STAGE: ${{ env.STAGE }}
+      with:
+        entrypoint: ./deploy/deploy

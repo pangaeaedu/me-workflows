@@ -1,0 +1,89 @@
+name: build-release
+
+on:
+  workflow_call:
+
+jobs:
+  build-release:
+    runs-on: self-hosted
+    steps:
+    - name: "Checkout source code"
+      uses: actions/checkout@v2
+      with:
+        token: ${{ secrets.GH_BOT_PAT }}
+        submodules: recursive
+    # Security-DependencyCheck
+    - name: "Dependency Check"
+      uses: javixeneize/DependencyCheck_Action@main
+      id: Depcheck
+      with:
+        path: '.'
+        format: 'HTML'
+      continue-on-error: true
+    # Security-DependencyCheck-UploadReport  
+    - name: "Upload Check Reports"
+      uses: actions/upload-artifact@v3.0.0
+      with:
+        name: 'security-report'
+        path: ${{github.workspace}}/reports
+      continue-on-error: true
+    # Security-SAST   
+    - name: SonarQube Scan
+      uses: sonarsource/sonarqube-scan-action@master
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      continue-on-error: true
+#     # Sensitive data check
+#     - name: Sensitive Data Check
+#       uses: Vannevelj/sensitivity@v1.11
+#       with:
+#         path: .
+#         token: ${{ secrets.GITHUB_TOKEN }}
+#         #ignorePaths: '["src/__tests__/checker.*.test.ts"]'
+#         ignoreEmails: '[".*@edmodo.com",".*@edmodoworld.com",".*@example.com",".*@github.com"]'
+#       continue-on-error: true
+    - name: "Prepare environment"
+      id: prep
+      run: |
+        # Source our global environment variables & add them to GITHUB_ENV for subsequent steps
+        source .github/global.env
+        cat .github/global.env >> ${GITHUB_ENV}
+        #STAGE=staging
+        SHORT_SHA=`git rev-parse --short ${{ github.sha }}`
+        echo "REVISION=${{ github.ref_name }}/${SHORT_SHA}" >> $GITHUB_ENV
+        #source .github/${STAGE}.env
+        #cat .github/${STAGE}.env >> ${GITHUB_ENV}
+
+        # Only rlease or hotfix branch is supported
+        if [[ '${{ github.ref }}' == refs/heads/${RELEASE_BRANCH} ]]; then
+          echo "::set-output name=tag::release-${{ github.sha }}"
+        elif [[ '${{ github.ref }}' =~ refs/heads/hotfix.* ]]; then
+          echo "::set-output name=tag::release-${{ github.sha }}"
+        else
+          echo "This isn't the release or hotfix branch. Exiting..."
+          exit 1
+        fi
+
+        echo "::set-output name=kubernetes-namespace::${KUBERNETES_NAMESPACE}"
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        IMAGE_TAG: ${{ steps.prep.outputs.tag }}
+        GITHUB_TOKEN: ${{ secrets.GH_BOT_PAT }}
+      run: |
+        # This is needed because the Github Action environment variables have issues if the value contains spaces (e.g. 'EXTRA_DOCKER_ARGS')
+        source .github/global.env
+
+        # Build and push the image using the SHA tag
+        docker build -f ${{ env.DOCKERFILE }} -t ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:${IMAGE_TAG} ${EXTRA_DOCKER_ARGS} .
+        docker push ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:${IMAGE_TAG}
+
+        docker tag ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:${IMAGE_TAG} ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:latest-release
+        docker push ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:latest-release
+    # Image security scanning
+    - name: Run veinmind-tools to scan image
+      uses: chaitin/veinmind-action@main
+      with:
+        scan-action: scan image
+        image-ref: '${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:latest-release'
+      continue-on-error: true
