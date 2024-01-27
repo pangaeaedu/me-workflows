@@ -3,6 +3,9 @@ name: build-deploy
 on:
   workflow_call:
 
+permissions:
+  contents: read
+
 jobs:
   build-deploy:
     runs-on: self-hosted
