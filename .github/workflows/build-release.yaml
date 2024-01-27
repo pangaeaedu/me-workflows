@@ -10,7 +10,7 @@ jobs:
     - name: "Checkout source code"
       uses: actions/checkout@v2
       with:
-        token: ${{ secrets.GH_BOT_PAT }}
+        token: ${{ secrets.ORG_TOKEN }}
         submodules: recursive
     # Security-DependencyCheck
     - name: "Dependency Check"
