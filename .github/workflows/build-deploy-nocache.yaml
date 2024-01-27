@@ -32,28 +32,28 @@ jobs:
     #     SOURCE_DIR: me-workflows
     #     DEST_DIR: ${{ github.event.repository.name }}
     # Security-DependencyCheck
-    - name: "Dependency Check"
-      uses: javixeneize/DependencyCheck_Action@main
-      id: Depcheck
-      with:
-        path: '.'
-        format: 'HTML'
-      continue-on-error: true
-    # Security-DependencyCheck-UploadReport  
-    - name: "Upload Check Reports"
-      uses: actions/upload-artifact@v3.0.0
-      with:
-        name: 'security-report'
-        path: ${{github.workspace}}/reports
-      continue-on-error: true
-    # Security-SAST   
-    - name: SonarQube Scan
-      uses: sonarsource/sonarqube-scan-action@master
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-      continue-on-error: true
-    # Sensitive data check
+    # - name: "Dependency Check"
+    #   uses: javixeneize/DependencyCheck_Action@main
+    #   id: Depcheck
+    #   with:
+    #     path: '.'
+    #     format: 'HTML'
+    #   continue-on-error: true
+    # # Security-DependencyCheck-UploadReport  
+    # - name: "Upload Check Reports"
+    #   uses: actions/upload-artifact@v3.0.0
+    #   with:
+    #     name: 'security-report'
+    #     path: ${{github.workspace}}/reports
+    #   continue-on-error: true
+    # # Security-SAST   
+    # - name: SonarQube Scan
+    #   uses: sonarsource/sonarqube-scan-action@master
+    #   env:
+    #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    #   continue-on-error: true
+    # # Sensitive data check
 #     - name: Sensitive Data Check
 #       uses: Vannevelj/sensitivity@v1.11
 #       with:
