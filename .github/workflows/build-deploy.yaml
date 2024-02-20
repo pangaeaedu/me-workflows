@@ -30,7 +30,6 @@ jobs:
     #     DEST_DIR: ${{ github.event.repository.name }}
     # Security-DependencyCheck
     - name: "Dependency Check"
-      #if: github.repository != 'edmodoworld/one-eye' && github.repository != 'edmodoworld/pipeline-playground'
       uses: javixeneize/DependencyCheck_Action@main
       id: Depcheck
       with:
@@ -51,15 +50,6 @@ jobs:
         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
       continue-on-error: true
-    # Sensitive data check
-#     - name: Sensitive Data Check
-#       uses: Vannevelj/sensitivity@v1.11
-#       with:
-#         path: .
-#         token: ${{ secrets.GITHUB_TOKEN }}
-#         #ignorePaths: '["src/__tests__/checker.*.test.ts"]'
-#         ignoreEmails: '[".*@edmodo.com",".*@edmodoworld.com",".*@example.com",".*@github.com"]'
-#       continue-on-error: true
     - name: "Prepare environment"
       id: prep
       run: |
