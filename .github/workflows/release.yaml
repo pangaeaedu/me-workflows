@@ -44,6 +44,7 @@ jobs:
         cat .github/${STG}.env >> ${GITHUB_ENV}
         echo "::set-output name=tag::${{ github.event.deployment.payload.step }}-${{ github.event.deployment.sha }}"
         echo "::set-output name=kubernetes-namespace::${KUBERNETES_NAMESPACE}"
+        echo  "RELEASE_DATE=$((`date "+%Y%m%d%H%M%S"`))" >> ${GITHUB_ENV}
     - name: AWS assume cicd role
       uses: aws-actions/configure-aws-credentials@v1
       env:
