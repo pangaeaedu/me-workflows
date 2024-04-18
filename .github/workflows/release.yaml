@@ -8,7 +8,7 @@ jobs:
     runs-on: self-hosted
     steps:
     - name: "Check permission"
-      uses: edmodoworld/check-cicd-permission@main
+      uses: pangaeaedu/check-cicd-permission@main
       with:
         require: ${{ secrets.CICD_ADMIN }}
         environment: ${{ github.event.deployment.environment }}
