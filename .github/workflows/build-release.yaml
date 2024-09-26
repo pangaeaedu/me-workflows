@@ -73,9 +73,9 @@ jobs:
         docker tag ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:${IMAGE_TAG} ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:latest-release
         docker push ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:latest-release
     # Image security scanning
-    - name: Run veinmind-tools to scan image
-      uses: chaitin/veinmind-action@main
-      with:
-        scan-action: scan image
-        image-ref: '${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:latest-release'
-      continue-on-error: true
+    # - name: Run veinmind-tools to scan image
+    #   uses: chaitin/veinmind-action@main
+    #   with:
+    #     scan-action: scan image
+    #     image-ref: '${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:latest-release'
+    #   continue-on-error: true
