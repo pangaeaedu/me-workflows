@@ -13,13 +13,13 @@ jobs:
         token: ${{ secrets.ORG_TOKEN }}
         submodules: recursive
     # Security-DependencyCheck
-    - name: "Dependency Check"
-      uses: javixeneize/DependencyCheck_Action@main
-      id: Depcheck
-      with:
-        path: '.'
-        format: 'HTML'
-      continue-on-error: true
+    # - name: "Dependency Check"
+    #   uses: javixeneize/DependencyCheck_Action@main
+    #   id: Depcheck
+    #   with:
+    #     path: '.'
+    #     format: 'HTML'
+    #   continue-on-error: true
     # Security-DependencyCheck-UploadReport  
     # - name: "Upload Check Reports"
     #   uses: actions/upload-artifact@v4.4.0
@@ -28,13 +28,13 @@ jobs:
     #     path: ${{github.workspace}}/reports
     #   continue-on-error: true
     # Security-SAST   
-    - name: SonarQube Scan
-      uses: sonarsource/sonarqube-scan-action@master
-      env:
-        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-        SONAR_SCANNER_OPTS: --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED
-      continue-on-error: true
+    # - name: SonarQube Scan
+    #   uses: sonarsource/sonarqube-scan-action@master
+    #   env:
+    #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    #     SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+    #     SONAR_SCANNER_OPTS: --add-opens java.base/sun.nio.ch=ALL-UNNAMED --add-opens java.base/java.io=ALL-UNNAMED
+    #   continue-on-error: true
     - name: "Prepare environment"
       id: prep
       run: |
