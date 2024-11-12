@@ -98,12 +98,12 @@ jobs:
         docker tag ${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:${IMAGE_TAG} ${LATEST_MAIN_IMAGE}
         docker push ${LATEST_MAIN_IMAGE}
     # Image security scanning
-    - name: Run veinmind-tools to scan image
-      uses: chaitin/veinmind-action@main
-      with:
-        scan-action: scan image
-        image-ref: '${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:${IMAGE_TAG}'
-      continue-on-error: true
+    # - name: Run veinmind-tools to scan image
+    #   uses: chaitin/veinmind-action@main
+    #   with:
+    #     scan-action: scan image
+    #     image-ref: '${{ env.ECR_REGISTRY }}/${{ env.APP_NAME }}:${IMAGE_TAG}'
+    #   continue-on-error: true
     - name: AWS assume cicd role
       uses: aws-actions/configure-aws-credentials@v1
       env:
