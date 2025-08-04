@@ -7,11 +7,6 @@ jobs:
   release:
     runs-on: self-hosted
     steps:
-    - name: "Check permission"
-      uses: pangaeaedu/check-cicd-permission@main
-      with:
-        require: ${{ secrets.CICD_ADMIN }}
-        environment: ${{ github.event.deployment.environment }}
     - name: "Checkout source code"
       uses: actions/checkout@v2   
     - name: "Prepare environment"
