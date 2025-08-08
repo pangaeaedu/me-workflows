@@ -64,8 +64,8 @@ jobs:
         # Configure our environment based on the branch, or if this is a PR build
         if [[ '${{ github.ref }}' == refs/heads/${MAIN_BRANCH} ]]; then
             echo "::set-output name=tag::main-${{ github.sha }}"
-            source .github/dev.env
-            cat .github/dev.env >> ${GITHUB_ENV}
+            source .github/qa.env
+            cat .github/qa.env >> ${GITHUB_ENV}
         else
           echo "This isn from main branch. Exiting..."
           exit 1
