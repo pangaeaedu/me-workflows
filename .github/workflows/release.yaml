@@ -41,7 +41,7 @@ jobs:
         echo "::set-output name=kubernetes-namespace::${KUBERNETES_NAMESPACE}"
         echo  "RELEASE_DATE=$((`date "+%Y%m%d%H%M%S"`))" >> ${GITHUB_ENV}
     - name: AWS assume cicd role
-      uses: aws-actions/configure-aws-credentials@v1
+      uses: aws-actions/configure-aws-credentials@v2
       env:
         AWS_SDK_LOAD_CONFIG: false
       with:
@@ -49,6 +49,7 @@ jobs:
         role-to-assume: ${{ env.GLOBAL_AWS_ROLE_ARN }}
         role-duration-seconds: 1200
         role-session-name: GitHubAction
+        disable-session-tagging: true
     - name: AWS assume helm role
       uses: aws-actions/configure-aws-credentials@v2
       env:
